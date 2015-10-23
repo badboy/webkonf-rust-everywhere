@@ -26,6 +26,17 @@ class API < Syro::Deck
     res.write object.to_json
   end
 
+  def current_user!
+    user = current_user
+    if user.nil?
+      res.delete_cookie("user-id")
+      res.status = 401
+      json(authorized: false, reason: "No such user")
+      halt(res.finish)
+    end
+    user
+  end
+
   def current_user
     signed_user_id = req.cookies["user-id"]
     if signed_user_id.nil?
@@ -34,91 +45,87 @@ class API < Syro::Deck
 
     begin
       user_id = SIGNER.unsign(signed_user_id)
-      u = User.with(:name, user_id)
-      u 
+      User.with(:name, user_id)
     rescue Nobi::BadData
       NullUser.new
     end
   end
 
-  def set_user_cookie(user_id)
-    signed_user_id = SIGNER.sign(user_id)
+  def set_user_cookie(user)
+    signed_user_id = SIGNER.sign(user.name)
     res.set_cookie("user-id", {
       path: "/",
       value: signed_user_id
     })
   end
+
+  def new_random_user
+    retries = 5
+    begin
+      user_id = rand(100_000_000).to_s
+      u = User.create(name: user_id)
+      return u
+    rescue Ohm::UniqueIndexViolation
+      retries -= 1
+
+      if retries == 0
+        return NullUser
+      else
+        retry
+      end
+    end
+  end
+
+  def fetch_user_or_create
+    signed_user_id = req.cookies["user-id"]
+    if signed_user_id.nil? || signed_user_id.empty?
+      return new_random_user
+    end
+
+    current_user
+  end
 end
+
 
 app = Syro.new(API) {
   on("time") {
     on("login") {
       get {
-        user_id = req.cookies["user-id"]
-        if user_id.nil? || user_id.empty?
-          retries = 5
-          begin
-            user_id = rand(100_000_000).to_s
-            u = User.create(name: user_id)
-          rescue Ohm::UniqueIndexViolation
-            retries -= 1
+        user = fetch_user_or_create
 
-            if retries == 0
-              retries = -1
-              res.delete_cookie("user-id")
-              res.status = 401
-              json(authorized: false, reason: "failed to create user")
-            else
-              retry
-            end
-          end
-
-          if retries != -1
-            set_user_cookie(user_id)
-            json(authorized: true, user_id: user_id, user: u.id)
-          end
+        if user.nil?
+          res.delete_cookie("user-id")
+          res.status = 401
+          json(authorized: false, reason: "No user")
         else
-          begin
-            u = current_user
-            if u.nil?
-              res.delete_cookie("user-id")
-              res.status = 401
-              json(authorized: false, reason: "No such user")
-            else
-              set_user_cookie(u.name)
-              json(authorized: true, user_id: user_id, user: u.id)
-            end
-          rescue Nobi::BadData
-            res.delete_cookie("user-id")
-            res.status = 401
-            json(authorized: false, reason: "Can't validate")
-          end
+          set_user_cookie(user)
+          json(authorized: true,
+               user_id: user.name,
+               user: user.id)
         end
       }
     }
 
     on("new") {
-      post {
-        u = current_user
-        if u.nil?
-          res.delete_cookie("user-id")
-          res.status = 401
-          json(authorized: false, reason: "No such user")
-          return
-        end
+      user = current_user!
 
+      post {
         start = req.params["start"].to_i
         stop = req.params["stop"].to_i
         if start == 0 || stop == 0
           json(error: "Start and stop parameters required.")
         else
-          track = TimeTrack.create start: start, stop: stop, user: u
+          track = TimeTrack.create(start: start,
+                                   stop: stop,
+                                   user: user)
           json(track)
         end
       }
     }
 
     on(:track_id) {
+      current_user!
+
       get {
         id = inbox[:track_id].to_i
         track = TimeTrack[id]
@@ -127,7 +134,8 @@ app = Syro.new(API) {
     }
 
     get {
-      json(current_user.tracks.to_a)
+      user = current_user!
+      json(user.tracks.to_a)
     }
   }
 }
