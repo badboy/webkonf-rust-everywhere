@@ -41,7 +41,7 @@ var stopTime = function stopTime(){
   var watch = { start: start, stop: end };
 
   $.ajax({
-    url: "/api/time/new",
+    url: "api/time/new",
     data: watch,
     dataType: "json",
     method: "POST"
@@ -108,7 +108,7 @@ var formatTime = function formatTime(ms_time){
 */
 var loadDOM = function loadDOM(){
   $.ajax({
-    url: "/api/time",
+    url: "api/time",
     dataType: "json",
   }).done(function (tracks) {
     $('#timeList').empty();
@@ -154,7 +154,7 @@ var addZero = function(n){
 
 // show the already saved times when page loads
 $.ajax({
-  url: "/api/time/login",
+  url: "api/time/login",
   dataType: "json",
   method: "GET"
 }).done(function (data) {
