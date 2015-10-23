@@ -1,0 +1,5 @@
+syro -v 1.1.0
+rack -v 1.6.4
+ohm -v 2.3.0
+mote -v 1.1.4
+nobi -v 0.0.1
