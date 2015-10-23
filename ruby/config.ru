@@ -133,9 +133,17 @@ app = Syro.new(API) {
   }
 }
 
-map "/api" do
-  run(app)
+if ENV.fetch("RACK_ENV") == "production"
+  mount_path = "/legacy"
+else
+  mount_path = "/"
 end
 
-use Rack::Session::Cookie, secret: "87998b9378250664e13e1f5d5922856391fae867f6d5c869e0721cb867ad1437"
-run Rack::File.new(FRONTENT_DIR)
+map mount_path do
+  map "/api" do
+    run(app)
+  end
+
+  use Rack::Session::Cookie, secret: "87998b9378250664e13e1f5d5922856391fae867f6d5c869e0721cb867ad1437"
+  run Rack::File.new(FRONTENT_DIR)
+end
