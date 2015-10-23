@@ -29,7 +29,7 @@ class API < Syro::Deck
   def current_user
     signed_user_id = req.cookies["user-id"]
     if signed_user_id.nil?
-      return NullUser
+      return NullUser.new
     end
 
     begin
