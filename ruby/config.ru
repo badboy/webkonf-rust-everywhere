@@ -80,7 +80,6 @@ app = Syro.new(API) {
         else
           begin
             u = current_user
-            $stderr.puts "CURRENT USER: %s" % u.inspect
             if u.nil?
               res.delete_cookie("user-id")
               res.status = 401
