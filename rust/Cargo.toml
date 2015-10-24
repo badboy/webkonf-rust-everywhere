@@ -1,4 +1,18 @@
 [package]
-name = "rust"
-version = "0.1.0"
 authors = ["Jan-Erik Rediger <janerik@fnordig.de>"]
+name = "timetracker-api"
+version = "0.1.0"
+
+[dependencies]
+cookie = "0.1.21"
+env_logger = "0.3.1"
+iron = "0.2.3"
+log = "0.3.2"
+oatmeal_raisin = "0.0.1"
+persistent = "0.0.7"
+r2d2 = "0.6.1"
+redis = "0.5.1"
+router = "0.0.15"
+
+[dependencies.r2d2_redis]
+git = "https://github.com/nevdelap/r2d2-redis"
