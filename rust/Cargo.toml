@@ -6,13 +6,24 @@ version = "0.1.0"
 [dependencies]
 cookie = "0.1.21"
 env_logger = "0.3.1"
-iron = "0.2.3"
+iron = { version = "0.2.3", default-features = false  }
 log = "0.3.2"
-oatmeal_raisin = "0.0.1"
 persistent = "0.0.7"
 r2d2 = "0.6.1"
-redis = "0.5.1"
 router = "0.0.15"
+rustc-serialize = "0.3.16"
+rand = "0.3.11"
+
+[dependencies.ohmers]
+path = "/home/badboy/code/rust/ohmers"
 
 [dependencies.r2d2_redis]
-git = "https://github.com/nevdelap/r2d2-redis"
+#git = "https://github.com/nevdelap/r2d2-redis"
+path = "/home/badboy/code/rust/r2d2-redis"
+
+[dependencies.oatmeal_raisin]
+path = "/home/badboy/code/rust/oatmeal_raisin"
+
+[dependencies.redis]
+git = "https://github.com/badboy/redis-rs"
+branch = "commands-for-connection-like"

@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
-pub struct User {
-    id: u32,
-    name: String,
-}
+model!(User {
+    uniques {
+        name : String = "".into();
+    };
+});
 
+#[derive(Debug)]
 pub struct TimeTrack {
     id: u32,
     start: u32,
@@ -15,32 +17,6 @@ pub trait Model {
     fn set_id(&mut self, id: u32);
     fn serialize(&self) -> HashMap<&'static str,String>;
     fn deserialize(data: String) -> Self;
-}
-
-impl User {
-    pub fn new(name: String) -> User {
-        User {
-            id: 0,
-            name: name
-        }
-    }
-}
-
-impl Model for User {
-    fn set_id(&mut self, id: u32) {
-        self.id = id;
-    }
-
-    fn serialize(&self) -> HashMap<&'static str,String> {
-        let mut hash = HashMap::with_capacity(2);
-        hash.insert("id", format!("{}", self.id));
-        hash.insert("name", self.name.clone());
-        hash
-    }
-
-    fn deserialize(data: String) -> User {
-        User::new("".into())
-    }
 }
 
 impl TimeTrack {
