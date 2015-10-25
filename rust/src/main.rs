@@ -27,10 +27,11 @@ use persistent::Read;
 use oatmeal_raisin::{Cookie, CookieJar, SetCookie, SigningKey};
 
 use std::ops::Deref;
-use r2d2::{Pool, PooledConnection};
+use r2d2::Pool;
 use r2d2_redis::{RedisConnectionManager};
 use redis::Commands;
-use ohmers::{Ohmer, Query, OhmerError, with};
+use ohmers::{Ohmer, OhmerError, with, get};
+use rustc_serialize::json;
 
 use std::error::Error;
 use std::fmt::{self, Debug};
@@ -38,7 +39,7 @@ use std::fmt::{self, Debug};
 use rand::{thread_rng, Rng};
 
 mod models;
-use models::{User, TimeTrack};
+use models::{User, TimeTrack, TimeTrackView};
 
 pub type RedisPool = Pool<RedisConnectionManager>;
 pub struct AppDb;
@@ -118,8 +119,7 @@ fn main() {
     let manager = RedisConnectionManager::new("redis://localhost").unwrap();
     let pool = r2d2::Pool::new(config, manager).unwrap();
 
-    let router = router!(get "/api/time/login" => login,
-                         post "/api/time/new" => new_track,
+    let router = router!(post "/api/time/new" => new_track,
                          get "/api/time/:id" => show_track,
                          get "/api/time" => show_all_tracks);
 
@@ -172,57 +172,71 @@ fn new_random_user(conn: &redis::Connection) -> Option<User> {
 
 fn fetch_user_or_create(jar: &cookie::CookieJar, conn: &redis::Connection) -> Option<User> {
     info!("fetch_user_or_create");
-    match jar.find("user-id") {
-        None => new_random_user(conn),
+    let user = match jar.find("user-id") {
+        None => return new_random_user(conn),
         Some(cookie) => {
             let name = cookie.value;
-            return fetch_user(name, conn)
+            fetch_user(name, conn)
         }
+    };
+
+    match user {
+        None => new_random_user(conn),
+        Some(user) => Some(user)
     }
-}
-
-fn login(req: &mut Request) -> IronResult<Response> {
-    let cookie_jar = req.get_mut::<CookieJar>().unwrap();
-    let sig_jar = cookie_jar.signed();
-
-    //match fetch_user_or_create(&sig_jar) {
-        //None => {
-            //sig_jar.remove("user-id");
-            //return Ok(Response::with((
-                        //status::Unauthorized,
-                        //r#"{"authorized": false, "reason": "No user"}"#
-                     //)));
-        //},
-        //Some(user) => {
-            //Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
-        //}
-    //}
-
-    //let fav = sig_jar.find("favorite");
-    //info!("fav: {:?}", fav);
-    //sig_jar.add(Cookie::new("favorite".into(), "oatmeal_raisin".into()));
-    Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
 }
 
 fn new_track(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
 }
 
-fn show_track(_: &mut Request) -> IronResult<Response> {
-    Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
+fn unauthorized() -> IronResult<Response> {
+    Ok(Response::with((status::Unauthorized, "Unauthorized")))
+}
+fn notfound() -> IronResult<Response> {
+    Ok(Response::with((status::NotFound, "Not found")))
+}
+
+fn show_track(req: &mut Request) -> IronResult<Response> {
+    let pool = req.get::<Read<AppDb>>().unwrap();
+    let conn = pool.get().unwrap();
+    let user = req.extensions.get::<User>().unwrap();
+    let id = req.extensions.get::<Router>().unwrap().find("id").unwrap_or("");
+    let id : usize = ::std::str::FromStr::from_str(id).unwrap_or(0);
+
+    info!("show_track. id={}", id);
+
+    let track : TimeTrack = match get(id, conn.deref()) {
+        Err(_) => return notfound(),
+        Ok(track) => track
+    };
+
+    info!("show_track. user={:?}, track={:?}", user, track);
+    let track_user = track.user.get(conn.deref()).unwrap();
+
+    if user.id != track_user.id {
+        return unauthorized();
+    }
+
+    let track = TimeTrackView::from(&track);
+    let encoded = json::encode(&track).unwrap();
+    Ok(Response::with((status::Ok, encoded)))
 }
 
 fn show_all_tracks(req: &mut Request) -> IronResult<Response> {
     let pool = req.get::<Read<AppDb>>().unwrap();
     let conn = pool.get().unwrap();
-
-    let res : String = match conn.deref().get("foo") {
-        Err(_) => "---".into(),
-        Ok(s) => s
-    };
-
     let user = req.extensions.get::<User>().unwrap();
 
-    let answer = format!("{{\"crates\": \"{}\", \"user\": \"{:?}\"}}", res, user);
-    Ok(Response::with((status::Ok, answer)))
+    let user = user.clone();
+    let tracks = collection!(user.tracks, *conn.deref())
+        .try_into_iter()
+        .unwrap()
+        .map(|t| TimeTrackView::from(&t))
+        .collect::<Vec<_>>();
+
+    info!("tracks: {:?}", tracks);
+
+    let encoded = json::encode(&tracks).unwrap();
+    Ok(Response::with((status::Ok, encoded)))
 }

@@ -1,48 +1,37 @@
-use std::collections::HashMap;
+use ohmers::{Reference, Collection};
 
-model!(User {
+model!(
+    derive { Clone }
+    User {
     uniques {
         name : String = "".into();
     };
+
+    tracks : Collection<TimeTrack> = Collection::new();
 });
 
-#[derive(Debug)]
-pub struct TimeTrack {
-    id: u32,
+model!(
+    derive { Clone }
+    TimeTrack {
+    start : u32 = 0;
+    stop : u32 = 0;
+
+    user : Reference<User> = Reference::new();
+});
+
+#[derive(Debug,RustcEncodable)]
+pub struct TimeTrackView {
+    id: usize,
     start: u32,
-    stop: u32,
+    stop: u32
 }
 
-pub trait Model {
-    fn set_id(&mut self, id: u32);
-    fn serialize(&self) -> HashMap<&'static str,String>;
-    fn deserialize(data: String) -> Self;
-}
-
-impl TimeTrack {
-    pub fn new(start: u32, stop: u32) -> TimeTrack {
-        TimeTrack {
-            start: start,
-            stop: stop,
-            id: 0,
+impl TimeTrackView {
+    pub fn from(track: &TimeTrack) -> TimeTrackView {
+        TimeTrackView {
+            id: track.id,
+            start: track.start,
+            stop: track.stop,
         }
-    }
-}
-
-impl Model for TimeTrack {
-    fn set_id(&mut self, id: u32) {
-        self.id = id;
-    }
-
-    fn serialize(&self) -> HashMap<&'static str,String> {
-        let mut hash = HashMap::with_capacity(3);
-        hash.insert("id", format!("{}", self.id));
-        hash.insert("start", format!("{}", self.start));
-        hash.insert("stop", format!("{}", self.stop));
-        hash
-    }
-
-    fn deserialize(data: String) -> TimeTrack {
-        TimeTrack::new(0,0)
     }
 }
