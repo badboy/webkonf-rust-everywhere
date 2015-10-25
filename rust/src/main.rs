@@ -70,15 +70,28 @@ fn main() {
         Ok(())
     });
 
+    // Signing key for cookies
     chain.link_before(Read::<SigningKey>::one(b"ba8742af4750"));
+    // The Redis Connection pool
     chain.link_before(Read::<AppDb>::one(pool));
+    // The user handling before every request
     chain.link(UserFetch::both());
+    // Make sure all cookies are set before sending the response
     chain.link_after(SetCookie);
 
     info!("Server starting on http://localhost:3000");
     Iron::new(chain).http("localhost:3000").unwrap();
 }
 
+/// POST /api/time/new
+///
+/// Parameters:
+///
+/// * `start`: The start timestamp, MUST be larger than 0
+/// * `stop`: The stop timestamp, MUST be larger than 0
+///
+/// Saves a new time tracker for the current user
+/// and returns it.
 fn new_track(req: &mut Request) -> IronResult<Response> {
     let ref pool = req.get::<Read<AppDb>>().unwrap();
     let conn = pool.get().unwrap();
@@ -114,6 +127,11 @@ fn new_track(req: &mut Request) -> IronResult<Response> {
     }
 }
 
+/// GET /api/time/:id
+///
+/// Show a certain time tracker by id for the current user.
+/// Throws an error if the requested tracker does not belong
+/// to the current user.
 fn show_track(req: &mut Request) -> IronResult<Response> {
     let pool = req.get::<Read<AppDb>>().unwrap();
     let conn = pool.get().unwrap();
@@ -140,6 +158,9 @@ fn show_track(req: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, encoded)))
 }
 
+/// GET /api/time
+///
+/// Show all saved time trackers for the current user
 fn show_all_tracks(req: &mut Request) -> IronResult<Response> {
     let pool = req.get::<Read<AppDb>>().unwrap();
     let conn = pool.get().unwrap();
