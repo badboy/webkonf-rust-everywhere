@@ -35,6 +35,7 @@ use ohmers::{Ohmer, Reference, with, get};
 use rustc_serialize::json;
 
 use std::str::FromStr;
+use std::env;
 
 mod models;
 mod user_handling;
@@ -55,7 +56,11 @@ fn main() {
         .connection_timeout_ms(2*1000)
         .pool_size(3)
         .build();
-    let manager = RedisConnectionManager::new("redis://localhost").unwrap();
+
+    let redis_url = env::var("REDIS_URL")
+        .unwrap_or("redis://localhost".into());
+
+    let manager = RedisConnectionManager::new(&redis_url[..]).unwrap();
     let pool = r2d2::Pool::new(config, manager).unwrap();
 
     let router = router!(post "/api/time/new" => new_track,
