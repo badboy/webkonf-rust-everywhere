@@ -9,6 +9,7 @@ extern crate router;
 extern crate log;
 extern crate env_logger;
 
+extern crate redis;
 extern crate r2d2;
 extern crate r2d2_redis;
 
@@ -19,8 +20,10 @@ use router::Router;
 use persistent::Read;
 use oatmeal_raisin::{Cookie, CookieJar, SetCookie, SigningKey};
 
+use std::ops::Deref;
 use r2d2::{Pool, PooledConnection};
 use r2d2_redis::{RedisConnectionManager};
+use redis::Commands;
 
 mod models;
 use models::{User, TimeTrack};
@@ -106,6 +109,12 @@ fn show_track(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
 }
 
-fn show_all_tracks(_: &mut Request) -> IronResult<Response> {
-    Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
+fn show_all_tracks(req: &mut Request) -> IronResult<Response> {
+    let pool = req.get::<Read<AppDb>>().unwrap();
+    let conn = pool.get().unwrap();
+
+    let res : String = conn.deref().get("foo").unwrap();
+
+    let answer = format!("{{\"crates\": \"{}\"}}", res);
+    Ok(Response::with((status::Ok, answer)))
 }
