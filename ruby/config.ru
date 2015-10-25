@@ -4,14 +4,11 @@
 require "json"
 require "syro"
 require "ohm"
-require "nobi"
 
 require_relative "models"
 
 FRONTENT_DIR = "../frontend"
-SIGNER = Nobi::Signer.new('a3f1194a5a26a1dc1730ad2df7d870f9e11194aba6c08865c38f2a2b65bb8a4b')
-
-
+SESSION_SECRET = ENV.fetch("RACK_SESSION_SECRET", "87998b9378")
 
 class API < Syro::Deck
   def log *args
@@ -26,10 +23,16 @@ class API < Syro::Deck
     res.write object.to_json
   end
 
-  def unauthorized
-    res.session["user-id"] = ""
+  def unauthorized(reason = "Unauthorized")
+    req.session["user-id"] = ""
     res.status = 401
-    json(authorized: false, reason: "No such user")
+    json(authorized: false, reason: reason)
+    halt(res.finish)
+  end
+
+  def notfound
+    res.status = 404
+    json(reason: "Track not found")
     halt(res.finish)
   end
 
@@ -40,7 +43,7 @@ class API < Syro::Deck
                         user = fetch_user_or_create(user_id)
 
                         if user.nil?
-                          unauthorized and return
+                          unauthorized("Failed to find user") and return
                         end
 
                         set_user_cookie(user)
@@ -83,6 +86,7 @@ end
 app = Syro.new(API) {
   on("time") {
     on("new") {
+      # Verify user first
       user = current_user
 
       post {
@@ -100,11 +104,17 @@ app = Syro.new(API) {
     }
 
     on(:track_id) {
-      current_user
-
       get {
         id = inbox[:track_id].to_i
         track = TimeTrack[id]
+        if track.nil?
+          notfound
+        end
+
+        if track.user != current_user
+          unauthorized("Not allowed")
+        end
+
         json(track)
       }
     }
@@ -122,9 +132,8 @@ else
 end
 
 map mount_path do
-  secret = ENV.fetch("RACK_SESSION_SECRET", "87998b9378")
   use Rack::MethodOverride
-  use Rack::Session::Cookie, secret: secret
+  use Rack::Session::Cookie, secret: SESSION_SECRET
 
   map "/api" do
     run(app)
