@@ -22,94 +22,30 @@ extern crate urlencoded;
 use iron::prelude::*;
 use iron::status;
 use iron::typemap::Key;
-use iron::middleware;
 use router::Router;
 use persistent::Read;
-use oatmeal_raisin::{Cookie, CookieJar, SetCookie, SigningKey};
+use oatmeal_raisin::{SetCookie, SigningKey};
 use urlencoded::UrlEncodedBody;
 
 use std::ops::Deref;
 use r2d2::Pool;
 use r2d2_redis::{RedisConnectionManager};
 use redis::Commands;
-use ohmers::{Ohmer, OhmerError, Reference, with, get};
+use ohmers::{Ohmer, Reference, with, get};
 use rustc_serialize::json;
 
-use std::error::Error;
-use std::fmt::{self, Debug};
 use std::str::FromStr;
 
-use rand::{thread_rng, Rng};
-
 mod models;
+mod user_handling;
+mod responses;
 use models::{User, TimeTrack, TimeTrackView};
+use user_handling::UserFetch;
+use responses::*;
 
 pub type RedisPool = Pool<RedisConnectionManager>;
 pub struct AppDb;
 impl Key for AppDb { type Value = RedisPool; }
-
-struct UserFetch;
-
-impl UserFetch {
-    pub fn both() -> (UserFetch,UserFetch) {
-        (UserFetch, UserFetch)
-    }
-}
-
-impl Key for User { type Value = User; }
-
-#[derive(Debug)]
-struct StringError(String);
-
-impl fmt::Display for StringError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(self, f)
-    }
-}
-
-impl Error for StringError {
-    fn description(&self) -> &str { &*self.0 }
-}
-
-impl middleware::BeforeMiddleware for UserFetch {
-    fn before(&self, req: &mut Request) -> IronResult<()> {
-        let pool = req.get::<Read<AppDb>>().unwrap();
-        let conn = pool.get().unwrap();
-
-        let user = {
-            let cookie_jar = req.get_mut::<CookieJar>().unwrap();
-            let sig_jar = cookie_jar.signed();
-            fetch_user_or_create(&sig_jar, conn.deref())
-        };
-
-        match user {
-            None => {
-                Err(IronError::new(
-                        StringError("Unauthorized".into()),
-                        status::Unauthorized))
-            }
-            Some(user) => {
-                req.extensions.insert::<User>(user);
-                Ok(())
-            }
-        }
-
-    }
-}
-
-impl middleware::AfterMiddleware for UserFetch {
-   fn after(&self, req: &mut Request, res: Response) -> IronResult<Response> {
-       let user = match req.extensions.get::<User>() {
-           Some(user) => user.name.clone(),
-           None => return Ok(res)
-       };
-
-       let cookie_jar = req.get_mut::<CookieJar>().unwrap();
-       let sig_jar = cookie_jar.signed();
-       sig_jar.add(Cookie::new("user-id".into(), user));
-       Ok(res)
-   }
-}
 
 fn main() {
     env_logger::init().unwrap();
@@ -141,52 +77,6 @@ fn main() {
 
     info!("Server starting on http://localhost:3000");
     Iron::new(chain).http("localhost:3000").unwrap();
-}
-
-fn fetch_user(name: String, conn: &redis::Connection) -> Option<User> {
-    info!("fetching user with {:?}", name);
-    let user : User = match with("name", name, conn) {
-        Err(_) => return None,
-        Ok(None) => return None,
-        Ok(Some(u)) => u
-    };
-
-    info!("fetch_user {:?}", user);
-    Some(user)
-}
-
-fn new_random_user(conn: &redis::Connection) -> Option<User> {
-    let mut retries = 5;
-    while retries > 0 {
-        let name: String = thread_rng().gen_ascii_chars().take(10).collect();
-        match create!(User { name: name, }, *conn) {
-            Ok(user) => return Some(user),
-            Err(OhmerError::UniqueIndexViolation(_)) => {
-                retries -= 1;
-                continue;
-            },
-            _ => return None
-        };
-
-    }
-
-    None
-}
-
-fn fetch_user_or_create(jar: &cookie::CookieJar, conn: &redis::Connection) -> Option<User> {
-    info!("fetch_user_or_create");
-    let user = match jar.find("user-id") {
-        None => return new_random_user(conn),
-        Some(cookie) => {
-            let name = cookie.value;
-            fetch_user(name, conn)
-        }
-    };
-
-    match user {
-        None => new_random_user(conn),
-        Some(user) => Some(user)
-    }
 }
 
 fn new_track(req: &mut Request) -> IronResult<Response> {
@@ -222,23 +112,6 @@ fn new_track(req: &mut Request) -> IronResult<Response> {
             Ok(Response::with((status::Ok, json)))
         }
     }
-}
-
-fn json_error(error: &str) -> IronResult<Response> {
-    #[derive(RustcEncodable)]
-    struct Error<'a> {
-        error: &'a str
-    }
-    let error = Error { error: error };
-    let json = json::encode(&error).unwrap();
-    Ok(Response::with((status::Ok, json)))
-}
-
-fn unauthorized() -> IronResult<Response> {
-    Ok(Response::with((status::Unauthorized, "Unauthorized")))
-}
-fn notfound() -> IronResult<Response> {
-    Ok(Response::with((status::NotFound, "Not found")))
 }
 
 fn show_track(req: &mut Request) -> IronResult<Response> {
