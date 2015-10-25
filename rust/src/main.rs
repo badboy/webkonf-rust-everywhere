@@ -17,6 +17,7 @@ extern crate redis;
 extern crate r2d2;
 extern crate r2d2_redis;
 extern crate rand;
+extern crate urlencoded;
 
 use iron::prelude::*;
 use iron::status;
@@ -25,16 +26,18 @@ use iron::middleware;
 use router::Router;
 use persistent::Read;
 use oatmeal_raisin::{Cookie, CookieJar, SetCookie, SigningKey};
+use urlencoded::UrlEncodedBody;
 
 use std::ops::Deref;
 use r2d2::Pool;
 use r2d2_redis::{RedisConnectionManager};
 use redis::Commands;
-use ohmers::{Ohmer, OhmerError, with, get};
+use ohmers::{Ohmer, OhmerError, Reference, with, get};
 use rustc_serialize::json;
 
 use std::error::Error;
 use std::fmt::{self, Debug};
+use std::str::FromStr;
 
 use rand::{thread_rng, Rng};
 
@@ -186,8 +189,49 @@ fn fetch_user_or_create(jar: &cookie::CookieJar, conn: &redis::Connection) -> Op
     }
 }
 
-fn new_track(_: &mut Request) -> IronResult<Response> {
-    Ok(Response::with((status::Ok, r#"{"crates": "crates"}"#)))
+fn new_track(req: &mut Request) -> IronResult<Response> {
+    let ref pool = req.get::<Read<AppDb>>().unwrap();
+    let conn = pool.get().unwrap();
+    let user = {
+        let user = req.extensions.get::<User>().unwrap();
+        user.clone()
+    };
+
+    match req.get_ref::<UrlEncodedBody>() {
+        Err(_) => return notfound(),
+        Ok(hashmap) => {
+            info!("Parsed body: {:?}", hashmap);
+
+            let start = hashmap.get("start")
+                .map(|s| u32::from_str(&s[0]).unwrap_or(0))
+                .unwrap_or(0);
+            let stop = hashmap.get("stop")
+                .map(|s| u32::from_str(&s[0]).unwrap_or(0))
+                .unwrap_or(0);
+
+            if start == 0 || stop == 0 {
+                return json_error("Start and stop parameters required.");
+            }
+
+            let track = create!(TimeTrack{
+                start: start,
+                stop: stop,
+                user: Reference::with_value(&user)
+            }, *conn.deref()).unwrap();
+            let json = json::encode(&TimeTrackView::from(&track)).unwrap();
+            Ok(Response::with((status::Ok, json)))
+        }
+    }
+}
+
+fn json_error(error: &str) -> IronResult<Response> {
+    #[derive(RustcEncodable)]
+    struct Error<'a> {
+        error: &'a str
+    }
+    let error = Error { error: error };
+    let json = json::encode(&error).unwrap();
+    Ok(Response::with((status::Ok, json)))
 }
 
 fn unauthorized() -> IronResult<Response> {
@@ -202,7 +246,7 @@ fn show_track(req: &mut Request) -> IronResult<Response> {
     let conn = pool.get().unwrap();
     let user = req.extensions.get::<User>().unwrap();
     let id = req.extensions.get::<Router>().unwrap().find("id").unwrap_or("");
-    let id : usize = ::std::str::FromStr::from_str(id).unwrap_or(0);
+    let id = usize::from_str(id).unwrap_or(0);
 
     info!("show_track. id={}", id);
 
