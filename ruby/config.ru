@@ -26,37 +26,30 @@ class API < Syro::Deck
     res.write object.to_json
   end
 
-  def current_user!
-    user = current_user
-    if user.nil?
-      res.delete_cookie("user-id")
-      res.status = 401
-      json(authorized: false, reason: "No such user")
-      halt(res.finish)
-    end
-    user
+  def unauthorized
+    res.session["user-id"] = ""
+    res.status = 401
+    json(authorized: false, reason: "No such user")
+    halt(res.finish)
   end
 
   def current_user
-    signed_user_id = req.cookies["user-id"]
-    if signed_user_id.nil?
-      return NullUser.new
-    end
+    @current_user ||= begin
+                        user_id = req.session["user-id"]
 
-    begin
-      user_id = SIGNER.unsign(signed_user_id)
-      User.with(:name, user_id)
-    rescue Nobi::BadData
-      NullUser.new
-    end
+                        user = fetch_user_or_create(user_id)
+
+                        if user.nil?
+                          unauthorized and return
+                        end
+
+                        set_user_cookie(user)
+                        user
+                      end
   end
 
   def set_user_cookie(user)
-    signed_user_id = SIGNER.sign(user.name)
-    res.set_cookie("user-id", {
-      path: "/",
-      value: signed_user_id
-    })
+    req.session["user-id"] = user.name
   end
 
   def new_random_user
@@ -69,45 +62,28 @@ class API < Syro::Deck
       retries -= 1
 
       if retries == 0
-        return NullUser
+        return nil
       else
         retry
       end
     end
   end
 
-  def fetch_user_or_create
-    signed_user_id = req.cookies["user-id"]
-    if signed_user_id.nil? || signed_user_id.empty?
-      return new_random_user
+  def fetch_user_or_create(user_id)
+    user = User.with(:name, user_id)
+    if user_id.nil? || user.nil?
+      user = new_random_user
     end
 
-    current_user
+    user
   end
 end
 
 
 app = Syro.new(API) {
   on("time") {
-    on("login") {
-      get {
-        user = fetch_user_or_create
-
-        if user.nil?
-          res.delete_cookie("user-id")
-          res.status = 401
-          json(authorized: false, reason: "No user")
-        else
-          set_user_cookie(user)
-          json(authorized: true,
-               user_id: user.name,
-               user: user.id)
-        end
-      }
-    }
-
     on("new") {
-      user = current_user!
+      user = current_user
 
       post {
         start = req.params["start"].to_i
@@ -124,7 +100,7 @@ app = Syro.new(API) {
     }
 
     on(:track_id) {
-      current_user!
+      current_user
 
       get {
         id = inbox[:track_id].to_i
@@ -134,8 +110,7 @@ app = Syro.new(API) {
     }
 
     get {
-      user = current_user!
-      json(user.tracks.to_a)
+      json(current_user.tracks.to_a)
     }
   }
 }
@@ -147,10 +122,13 @@ else
 end
 
 map mount_path do
+  secret = ENV.fetch("RACK_SESSION_SECRET", "87998b9378")
+  use Rack::MethodOverride
+  use Rack::Session::Cookie, secret: secret
+
   map "/api" do
     run(app)
   end
 
-  use Rack::Session::Cookie, secret: "87998b9378250664e13e1f5d5922856391fae867f6d5c869e0721cb867ad1437"
   run Rack::File.new(FRONTENT_DIR)
 end

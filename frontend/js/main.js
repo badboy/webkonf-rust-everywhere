@@ -150,22 +150,7 @@ var addZero = function(n){
   return n;
 }
 
-// deleteDB();
-
 // show the already saved times when page loads
-$.ajax({
-  url: "api/time/login",
-  dataType: "json",
-  method: "GET"
-}).done(function (data) {
-  console.log("login", data);
-  loadDOM();
-}).fail(function (xhr, status, err) {
-  console.log("login failed", {
-    xhr: xhr,
-    status: status,
-    err: err
-  });
-});
+loadDOM();
 
 $('#track').bind('click', toggleTimer);

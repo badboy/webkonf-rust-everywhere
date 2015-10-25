@@ -21,17 +21,3 @@ class User < Ohm::Model
 
   collection :tracks, :TimeTrack
 end
-
-class NullUser
-  def name
-    nil
-  end
-
-  def tracks
-    []
-  end
-
-  def nil?
-    true
-  end
-end
