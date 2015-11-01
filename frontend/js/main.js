@@ -1,11 +1,5 @@
 'use strict';
 
-// init hoodie
-//window.hoodie   = new Hoodie();
-
-// init timeTracker
-window.timeTracker = window.timeTracker || {};
-
 var counter = 0;
 
 var getTime = function getTime(eve){
