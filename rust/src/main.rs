@@ -4,6 +4,7 @@ extern crate cookie;
 extern crate oatmeal_raisin;
 #[macro_use]
 extern crate router;
+extern crate staticfile;
 
 #[macro_use]
 extern crate log;
@@ -21,11 +22,16 @@ extern crate urlencoded;
 
 use iron::prelude::*;
 use iron::status;
+use iron::headers::{AccessControlAllowOrigin, Location};
+
 use iron::typemap::Key;
 use router::Router;
 use persistent::Read;
 use oatmeal_raisin::{SetCookie, SigningKey};
 use urlencoded::UrlEncodedBody;
+
+use std::path::Path;
+use staticfile::Static;
 
 use std::ops::Deref;
 use r2d2::Pool;
@@ -59,13 +65,18 @@ fn main() {
 
     let redis_url = env::var("REDIS_URL")
         .unwrap_or("redis://localhost".into());
+    let static_path = env::var("STATIC_PATH")
+        .unwrap_or("../frontend".into());
 
     let manager = RedisConnectionManager::new(&redis_url[..]).unwrap();
     let pool = r2d2::Pool::new(config, manager).unwrap();
 
     let router = router!(post "/api/time/new" => new_track,
                          get "/api/time/:id" => show_track,
-                         get "/api/time" => show_all_tracks);
+                         get "/api/time" => show_all_tracks,
+                         get "/" => redirect_to_index,
+                         get "/*" => Static::new(Path::new(&static_path))
+                        );
 
     let mut chain = Chain::new(router);
 
@@ -84,8 +95,20 @@ fn main() {
     // Make sure all cookies are set before sending the response
     chain.link_after(SetCookie);
 
+    chain.link_after(|_: &mut Request, mut res: Response| {
+        // lol
+        res.headers.set(AccessControlAllowOrigin::Any);
+        Ok(res)
+    });
+
     info!("Server starting on http://localhost:3000");
     Iron::new(chain).http("localhost:3000").unwrap();
+}
+
+fn redirect_to_index(_: &mut Request) -> IronResult<Response> {
+    let mut res = Response::with(status::TemporaryRedirect);
+    res.headers.set(Location("/index.html".into()));
+    Ok(res)
 }
 
 /// POST /api/time/new
