@@ -140,6 +140,7 @@ fn new_track(req: &mut Request) -> IronResult<Response> {
                 .map(|s| u64::from_str(&s[0]).unwrap_or(0))
                 .unwrap_or(0);
 
+            info!("Start: {:?}, Stop: {:?}", start, stop);
             if start == 0 || stop == 0 {
                 return json_error("Start and stop parameters required.");
             }
@@ -149,6 +150,8 @@ fn new_track(req: &mut Request) -> IronResult<Response> {
                 stop: stop,
                 user: Reference::with_value(&user)
             }, *conn.deref()).unwrap();
+            info!("Saving track: {:?}, with user {:?}", track, user);
+
             let json = json::encode(&TimeTrackView::from(&track)).unwrap();
             Ok(Response::with((status::Ok, json)))
         }

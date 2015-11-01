@@ -3,27 +3,29 @@ use ohmers::{Reference, Collection};
 model!(
     derive { Clone }
     User {
-    uniques {
-        name : String = "".into();
-    };
+        uniques {
+            name : String = "".into();
+        };
 
-    tracks : Collection<TimeTrack> = Collection::new();
-});
+        tracks : Collection<TimeTrack> = Collection::new();
+    }
+);
 
 model!(
     derive { Clone }
     TimeTrack {
-    start : u32 = 0;
-    stop : u32 = 0;
+        indices { user : Reference<User> = Reference::new(); };
 
-    user : Reference<User> = Reference::new();
-});
+        start : u64 = 0;
+        stop : u64 = 0;
+    }
+);
 
 #[derive(Debug,RustcEncodable)]
 pub struct TimeTrackView {
     id: usize,
-    start: u32,
-    stop: u32
+    start: u64,
+    stop: u64
 }
 
 impl TimeTrackView {
