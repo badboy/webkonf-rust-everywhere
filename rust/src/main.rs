@@ -134,10 +134,10 @@ fn new_track(req: &mut Request) -> IronResult<Response> {
             info!("Parsed body: {:?}", hashmap);
 
             let start = hashmap.get("start")
-                .map(|s| u32::from_str(&s[0]).unwrap_or(0))
+                .map(|s| u64::from_str(&s[0]).unwrap_or(0))
                 .unwrap_or(0);
             let stop = hashmap.get("stop")
-                .map(|s| u32::from_str(&s[0]).unwrap_or(0))
+                .map(|s| u64::from_str(&s[0]).unwrap_or(0))
                 .unwrap_or(0);
 
             if start == 0 || stop == 0 {
