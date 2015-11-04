@@ -63,7 +63,7 @@ fn load_dom(document: &Document) {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         js!{ (&data[..]) br#"
             alert("loaded dom");
-            let tracks = JSON.parse(UTF8ToString($0));
+            var tracks = JSON.parse(UTF8ToString($0));
             for (var i = 0, len = tracks.length; i<len; i++) {
               var diff = js_formatTime(tracks[i].stop - tracks[i].start);
               $('#timeList').append(
