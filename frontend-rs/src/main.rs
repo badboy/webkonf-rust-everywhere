@@ -89,8 +89,8 @@ fn load_dom(document: &Document) {
 
 fn run() {
     js! {br#"
-        if (typeof window.run == "undefined") {
-          window.run = function() {
+        if (typeof window.run_timer == "undefined") {
+          window.run_timer = function run_timer() {
             var start = sessionStorage.getItem('start');
             var now = Date.now();
 
@@ -99,7 +99,7 @@ fn run() {
           }
         }
 
-        window.run();
+        window.run_timer();
     "#};
 }
 
