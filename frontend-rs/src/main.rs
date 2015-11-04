@@ -43,6 +43,9 @@ fn stop_time(document: &Document) {
 }
 
 fn toggleTimer(document: &Document) {
+    log(&format!("toggleTimer started, counter: {}", counter));
+
+    counter += 1;
     let track = document.element_query("#track").unwrap();
 
     if counter % 2 == 0 {
@@ -54,6 +57,7 @@ fn toggleTimer(document: &Document) {
         get_time(document);
         println!("get_time");
     }
+    log(&format!("toggleTimer ends, counter: {}", counter));
 }
 
 fn load_dom(document: &Document) {
