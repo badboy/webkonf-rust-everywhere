@@ -94,7 +94,7 @@ fn run() {
             var start = sessionStorage.getItem('start');
             var now = Date.now();
 
-            document.getElementById('clock').innerHTML = formatTime(now-start);
+            document.getElementById('clock').innerHTML = js_formatTime(now-start);
             setTimeout(run, 100);
           }
         }
