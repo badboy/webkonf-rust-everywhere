@@ -46,6 +46,7 @@ impl<'a> Interop for *const libc::c_void {
     }
 }
 
+#[macro_export]
 macro_rules! js {
     ( ($( $x:expr ),*) $y:expr ) => {
         {
@@ -163,6 +164,12 @@ impl<'a> HtmlNode<'a> {
         "#};
     }
 
+    pub fn text_set(&self, s: &str) {
+        js! { (self.id, s) br#"
+            WEBPLATFORM.rs_refs[$0].innerText = UTF8ToString($1);
+        "#};
+    }
+
     pub fn html_get(&self) -> String {
         let a = js! { (self.id) br#"
             return allocate(intArrayFromString(WEBPLATFORM.rs_refs[$0].innerHTML), 'i8', ALLOC_STACK);
@@ -211,7 +218,7 @@ impl<'a> HtmlNode<'a> {
             })
         }
     }
-    
+
     pub fn data_set(&self, s: &str, v: &str) {
         js! { (self.id, s, v) br#"
             WEBPLATFORM.rs_refs[$0].dataset[UTF8ToString($1)] = UTF8ToString($2);
@@ -232,7 +239,7 @@ impl<'a> HtmlNode<'a> {
             })
         }
     }
-    
+
     pub fn style_set_str(&self, s: &str, v: &str) {
         js! { (self.id, s, v) br#"
             WEBPLATFORM.rs_refs[$0].style[UTF8ToString($1)] = UTF8ToString($2);
@@ -247,25 +254,25 @@ impl<'a> HtmlNode<'a> {
             str::from_utf8(CStr::from_ptr(a as *const libc::c_char).to_bytes()).unwrap().to_owned()
         }
     }
-    
+
     pub fn prop_set_i32(&self, s: &str, v: i32) {
         js! { (self.id, s, v) br#"
             WEBPLATFORM.rs_refs[$0][UTF8ToString($1)] = $2;
         "#};
     }
-    
+
     pub fn prop_set_str(&self, s: &str, v: &str) {
         js! { (self.id, s, v) br#"
             WEBPLATFORM.rs_refs[$0][UTF8ToString($1)] = UTF8ToString($2);
         "#};
     }
-    
+
     pub fn prop_get_i32(&self, s: &str) -> i32 {
         return js! { (self.id, s) br#"
             return Number(WEBPLATFORM.rs_refs[$0][UTF8ToString($1)])
         "#};
     }
-    
+
     pub fn prop_get_str(&self, s: &str) -> String {
         let a = js! { (self.id, s) br#"
             return allocate(intArrayFromString(WEBPLATFORM.rs_refs[$0][UTF8ToString($1)]), 'i8', ALLOC_STACK);
@@ -409,9 +416,71 @@ impl<'a> Document<'a> {
 }
 
 pub struct LocalStorageInterface;
+pub struct SessionStorageInterface;
+pub struct DateInterface;
 
 pub struct LocalStorageIterator {
     index: i32,
+}
+
+pub struct JQuery<'a> {
+    refs: Rc<RefCell<Vec<Box<FnMut(String) + 'a>>>>,
+}
+
+extern fn rust_caller_string<F: FnMut(String)>(a: *const libc::c_void, dataptr: *const libc::c_char) {
+    let v:&mut F = unsafe { mem::transmute(a) };
+    let data = unsafe {
+        str::from_utf8_unchecked(CStr::from_ptr(dataptr).to_bytes()).to_owned()
+    };
+    v(data);
+}
+impl<'a> JQuery<'a> {
+    pub fn new() -> JQuery<'a> {
+        JQuery {
+            refs: Rc::new(RefCell::new(Vec::new())),
+        }
+    }
+
+    pub fn ajax<F: FnMut(String) + 'a>(&self, url: &str, f: F) {
+        unsafe {
+            let b = Box::new(f);
+            let a = &*b as *const _;
+
+            js! { (url, a as *const libc::c_void,
+                    rust_caller_string::<F> as *const libc::c_void)
+                br#"
+                jQuery.ajax({url: UTF8ToString($0)}).done(function(data) {
+                    Runtime.dynCall('vii', $2, [$1, allocate(intArrayFromString(data), 'i8', ALLOC_STACK)]);
+                });
+            "#};
+            (&*self.refs).borrow_mut().push(b);
+        }
+    }
+
+    pub fn post<F: FnMut(String) + 'a>(&self, url: &str, data: &str, f: F) {
+        unsafe {
+            let b = Box::new(f);
+            let a = &*b as *const _;
+
+            js! { (url, data, a as *const libc::c_void,
+                    rust_caller_string::<F> as *const libc::c_void)
+                br#"
+                jQuery.ajax({url: UTF8ToString($0), data: UTF8ToString($1), method: "POST"}).done(function(data) {
+                    Runtime.dynCall('vii', $3, [$2, allocate(intArrayFromString(data), 'i8', ALLOC_STACK)]);
+                });
+            "#};
+            (&*self.refs).borrow_mut().push(b);
+        }
+    }
+}
+
+impl DateInterface {
+    pub fn now(&self) -> i32 {
+        js! { br#"
+            // Gnaaah, it's in milliseconds, but that doesn't it into 32 bit
+            return Date.now() / 1000;
+        "# }
+    }
 }
 
 impl LocalStorageInterface {
@@ -467,6 +536,60 @@ impl LocalStorageInterface {
     }
 }
 
+impl SessionStorageInterface {
+    pub fn len(&self) -> i32 {
+        js! { br#"
+            return window.sessionStorage.length;
+        "#}
+    }
+
+    pub fn clear(&self) {
+        js! { br#"
+            window.sessionStorage.clear();
+        "#};
+    }
+
+    pub fn remove(&self, s: &str) {
+        js! { (s) br#"
+            window.sessionStorage.removeItem(UTF8ToString($0));
+        "#};
+    }
+
+    pub fn set(&self, s: &str, v: &str) {
+        js! { (s, v) br#"
+            window.sessionStorage.setItem(UTF8ToString($0), UTF8ToString($1));
+        "#};
+    }
+
+    pub fn get(&self, name: &str) -> Option<String> {
+        let a = js! { (name) br#"
+            var str = window.sessionStorage.getItem(UTF8ToString($0));
+            if (str == null) {
+                return -1;
+            }
+            return allocate(intArrayFromString(str), 'i8', ALLOC_STACK);
+        "# };
+        if a == -1 {
+            None
+        } else {
+            Some(unsafe {
+                str::from_utf8(CStr::from_ptr(a as *const libc::c_char).to_bytes()).unwrap().to_owned()
+            })
+        }
+    }
+
+    pub fn key(&self, index: i32) -> String {
+        let a = js! { (index) br#"
+            var key = window.sessionStorage.key($0);
+            return allocate(intArrayFromString(str), 'i8', ALLOC_STACK);
+        "# };
+        unsafe {
+            str::from_utf8(CStr::from_ptr(a as *const libc::c_char).to_bytes()).unwrap().to_owned()
+        }
+    }
+}
+
+
 impl IntoIterator for LocalStorageInterface {
     type Item = String;
     type IntoIter = LocalStorageIterator;
@@ -489,6 +612,10 @@ impl Iterator for LocalStorageIterator {
 
 #[allow(non_upper_case_globals)]
 pub const LocalStorage: LocalStorageInterface = LocalStorageInterface;
+#[allow(non_upper_case_globals)]
+pub const SessionStorage: SessionStorageInterface = SessionStorageInterface;
+#[allow(non_upper_case_globals)]
+pub const Date: DateInterface = DateInterface;
 
 pub fn init<'a>() -> Document<'a> {
     js! { br#"
@@ -510,7 +637,7 @@ extern fn leavemebe() {
 pub fn spin() {
     unsafe {
         emscripten_set_main_loop(leavemebe, 0, 1);
-        
+
     }
 }
 
