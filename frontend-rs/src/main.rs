@@ -12,7 +12,7 @@ use webplatform::{Date, Document, SessionStorage};
 use std::borrow::ToOwned;
 use std::str::FromStr;
 
-fn get_time(document: Document) {
+fn get_time(document: &Document) {
     run();
 
     let clock = document.element_query("#clock").unwrap();
@@ -23,7 +23,7 @@ fn get_time(document: Document) {
     SessionStorage.set("start", &now.to_string());
 }
 
-fn stop_time(document: Document) {
+fn stop_time(document: &Document) {
     let now = Date::now();
     SessionStorage.set("stop", &now.to_string());
     let clock = document.element_query("#clock").unwrap();
@@ -42,7 +42,7 @@ fn stop_time(document: Document) {
     });
 }
 
-fn toggleTimer(document: Document) {
+fn toggleTimer(document: &Document) {
     let track = document.element_query("#track").unwrap();
 
     if counter % 2 == 0 {
@@ -95,7 +95,7 @@ fn main() {
     {
         let track = document.element_query("#track").unwrap();
         track.on("click", |_e| {
-            alert("button cliked");
+            toggleTimer(&document);
         });
         load_dom(&document);
 
