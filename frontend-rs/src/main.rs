@@ -120,7 +120,7 @@ fn main() {
 
         js! {
             br#"
-                var start = sessionStorage.get('start');
+                var start = sessionStorage.getItem('start');
                 console.log({start: start});
             "#
         };
