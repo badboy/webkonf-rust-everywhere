@@ -5,9 +5,13 @@
 #[macro_use] extern crate webplatform;
 extern crate libc;
 
-static counter : u32 = 0;
+static mut g_counter : u32 = 0;
 
-use webplatform::{Date, Document, SessionStorage};
+fn counter(n: u32) -> u32 {
+    unsafe { g_counter += n; g_counter }
+}
+
+use webplatform::{Date, Document, SessionStorage, log};
 
 use std::borrow::ToOwned;
 use std::str::FromStr;
@@ -43,12 +47,12 @@ fn stop_time(document: &Document) {
 }
 
 fn toggleTimer(document: &Document) {
-    log(&format!("toggleTimer started, counter: {}", counter));
+    log(&format!("toggleTimer started, counter: {}", counter(0)));
 
-    counter += 1;
+    counter(1);
     let track = document.element_query("#track").unwrap();
 
-    if counter % 2 == 0 {
+    if counter(0) % 2 == 0 {
         track.text_set("Go");
         stop_time(document);
         println!("stop_time");
@@ -57,7 +61,7 @@ fn toggleTimer(document: &Document) {
         get_time(document);
         println!("get_time");
     }
-    log(&format!("toggleTimer ends, counter: {}", counter));
+    log(&format!("toggleTimer ends, counter: {}", counter(0)));
 }
 
 fn load_dom(document: &Document) {
