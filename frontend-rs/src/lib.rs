@@ -21,7 +21,7 @@ mod webplatform {
     pub use emscripten_asm_const_int;
 }
 
-trait Interop {
+pub trait Interop {
     fn as_int(self, _:&mut Vec<CString>) -> libc::c_int;
 }
 
@@ -50,13 +50,13 @@ impl<'a> Interop for *const libc::c_void {
 macro_rules! js {
     ( ($( $x:expr ),*) $y:expr ) => {
         {
-            let mut arena:Vec<CString> = Vec::new();
-            unsafe { ::webplatform::emscripten_asm_const_int(concat_bytes!($y, b"\0").as_ptr() as *const libc::c_char, $(Interop::as_int($x, &mut arena)),*) }
+            let mut arena:Vec<::std::ffi::CString> = Vec::new();
+            unsafe { $crate::emscripten_asm_const_int(concat_bytes!($y, b"\0").as_ptr() as *const libc::c_char, $($crate::Interop::as_int($x, &mut arena)),*) }
         }
     };
     ( $y:expr ) => {
         {
-            unsafe { ::webplatform::emscripten_asm_const_int(concat_bytes!($y, b"\0").as_ptr() as *const libc::c_char) }
+            unsafe { $crate::emscripten_asm_const_int(concat_bytes!($y, b"\0").as_ptr() as *const libc::c_char) }
         }
     };
 }
