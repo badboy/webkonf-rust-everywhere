@@ -346,6 +346,12 @@ pub fn alert(s: &str) {
     "#};
 }
 
+pub fn log(s: &str) {
+    js! { (s) br#"
+        console.log(UTF8ToString($0));
+    "#};
+}
+
 pub struct Document<'a> {
     refs: Rc<RefCell<Vec<Box<FnMut(Event<'a>) + 'a>>>>,
 }
