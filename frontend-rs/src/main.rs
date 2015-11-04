@@ -60,7 +60,7 @@ fn load_dom(document: &Document) {
     let jquery = webplatform::JQuery::new();
 
     jquery.ajax("http://localhost:3000/api/time", move |data| {
-        document.element_query("#timeList").unwrap().html_set("");
+        document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         js!{ (&data[..]) br#"
             alert("loaded dom");
             let tracks = JSON.parse(UTF8ToString($0));
@@ -118,12 +118,7 @@ fn main() {
 
         webplatform::SessionStorageInterface.set("start", "0");
 
-        js! {
-            br#"
-                var start = sessionStorage.getItem('start');
-                console.log({start: start});
-            "#
-        };
+        load_dom(&document);
 
         println!("This should be blue: {:?}", bodyref.prop_get_str("bgColor"));
         println!("Width?: {:?}", bodyref.prop_get_i32("clientWidth"));
