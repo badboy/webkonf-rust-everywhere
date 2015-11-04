@@ -28,6 +28,7 @@ fn get_time(document: &Document) {
 }
 
 fn stop_time(document: &Document) {
+    log("stop_time start");
     let now = Date::now();
     SessionStorage.set("stop", &now.to_string());
     let clock = document.element_query("#clock").unwrap();
@@ -44,9 +45,10 @@ fn stop_time(document: &Document) {
     jquery.post("http://localhost:3000/api/time/new", &data, |data| {
         load_dom(&document);
     });
+    log("stop_time end. ajax on its way");
 }
 
-fn toggleTimer(document: &Document) {
+fn toggle_timer(document: &Document) {
     log(&format!("toggleTimer started, counter: {}", counter(0)));
 
     counter(1);
@@ -65,11 +67,14 @@ fn toggleTimer(document: &Document) {
 }
 
 fn load_dom(document: &Document) {
+    log("loading the dom. I guess.");
     let jquery = webplatform::JQuery::new();
 
     jquery.ajax("http://localhost:3000/api/time", move |data| {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         js!{ (&data[..]) br#"
+            window.tracks = UTF8ToString($0);
+            console.log("got response", UTF8ToString($0));
             var tracks = JSON.parse(UTF8ToString($0));
             for (var i = 0, len = tracks.length; i<len; i++) {
               var diff = js_formatTime(tracks[i].stop - tracks[i].start);
@@ -103,7 +108,7 @@ fn main() {
     {
         let track = document.element_query("#track").unwrap();
         track.on("click", |_e| {
-            toggleTimer(&document);
+            toggle_timer(&document);
         });
         load_dom(&document);
 
