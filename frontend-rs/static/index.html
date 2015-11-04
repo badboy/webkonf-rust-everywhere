@@ -61,6 +61,40 @@
           if (text) Module.printErr('[post-exception status] ' + text);
         };
       };
+      var js_formatTime = function formatTime(ms_time){
+        var time = ms_time;
+        var s, m, h;
+
+        // when the tracked time is more then an hour (60 * 60 * 1000)
+        if (time > 3600000) {
+          h = parseInt(time / 3600000);
+          time = time % 3600000;
+        } else {
+          h = 0;
+        }
+
+        // when the tracked time is more then a minute (60 * 1000)
+        if (time > 60000) {
+          m = parseInt(time / 60000);
+          time = time % 60000;
+        } else {
+          m = 0;
+        }
+
+        // when the tracked time is more then a second (1000)
+        if (time > 1000) {
+          s = parseInt(time / 1000);
+          time = time % 1000;
+        } else {
+          s = 0;
+        }
+
+        h = addZero(h);
+        m = addZero(m);
+        s = addZero(s);
+
+        return String(h)+ ' : ' + String(m) + ' : ' + String(s);
+      }
     </script>
     <script type="text/javascript" src="js/jquery-2.1.0.min.js"></script>
     <script type="text/javascript" src="js/insertAdjacentHTML.js"></script>
