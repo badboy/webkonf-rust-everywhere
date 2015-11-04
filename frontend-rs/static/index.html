@@ -61,6 +61,12 @@
           if (text) Module.printErr('[post-exception status] ' + text);
         };
       };
+      var addZero = function(n){
+        if (n < 10) {
+          n = '0' + String(n);
+        }
+        return n;
+      }
       var js_formatTime = function formatTime(ms_time){
         var time = ms_time;
         var s, m, h;
