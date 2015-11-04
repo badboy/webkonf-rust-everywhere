@@ -5,43 +5,47 @@
 #[macro_use] extern crate webplatform;
 extern crate libc;
 
+static counter : u32 = 0;
+
+use webplatform::{Date, Document, SessionStorage};
+
 use std::borrow::ToOwned;
 use std::str::FromStr;
 
 fn get_time(document: Document) {
     run();
 
-    let clock = document.element_query("#clock");
+    let clock = document.element_query("#clock").unwrap();
     clock.style_set_str("visibility", "visible");
     clock.html_set("00 : 00 : 00");
 
-    let now = webplatform::Date::now();
-    webplatform.sessionStorage.setItem("start", now.to_string());
+    let now = Date::now();
+    SessionStorage.set("start", &now.to_string());
 }
 
 fn stop_time(document: Document) {
-    let now = webplatform::Date::now();
-    webplatform.sessionStorage.setItem("stop", now.to_string());
-    let clock = document.element_query("#clock");
+    let now = Date::now();
+    SessionStorage.set("stop", &now.to_string());
+    let clock = document.element_query("#clock").unwrap();
     clock.style_set_str("visibility", "hidden");
 
-    let start = webplatform.sessionStorage.getItem("start");
+    let start = SessionStorage.get("start").unwrap_or("0".to_owned());
     let start = u32::from_str(&start).unwrap_or(0);
-    let stop  = webplatform.sessionStorage.getItem("stop");
+    let stop  = SessionStorage.get("stop").unwrap_or("0".to_owned());
     let stop = u32::from_str(&stop).unwrap_or(0);
 
     let data = format!("start={}&stop={}", start, stop);
 
     let jquery = webplatform::JQuery::new();
-    JQuery.post("api/time/new", |data| {
-        load_dom(document);
+    jquery.post("api/time/new", &data, |data| {
+        load_dom(&document);
     });
 }
 
 fn toggleTimer(document: Document) {
-    let track = document.element_query("#track");
+    let track = document.element_query("#track").unwrap();
 
-    if counter%2 == 0 {
+    if counter % 2 == 0 {
         track.text_set("Go");
         stop_time(document);
         println!("stop_time");
@@ -52,13 +56,12 @@ fn toggleTimer(document: Document) {
     }
 }
 
-fn load_dom(document: Document) {
+fn load_dom(document: &Document) {
     let jquery = webplatform::JQuery::new();
 
-    jqery.ajax("http://localhost:3000/api/time", move |data| {
-        document.element_query("#timeList").html_set("");
-        js!{ (data)
-            br#"
+    jquery.ajax("http://localhost:3000/api/time", move |data| {
+        document.element_query("#timeList").unwrap().html_set("");
+        js!{ (&data[..]) br#"
             alert("loaded dom");
             let tracks = JSON.parse(UTF8ToString($0));
             for (var i = 0, len = tracks.length; i<len; i++) {
@@ -68,7 +71,7 @@ fn load_dom(document: Document) {
                   diff + '</li>'
               );
             }
-        "#}
+        "#};
     });
 }
 
@@ -117,7 +120,7 @@ fn main() {
 
         js! {
             br#"
-                var start = sessionStorage.getItem('start');
+                var start = sessionStorage.get('start');
                 console.log({start: start});
             "#
         };

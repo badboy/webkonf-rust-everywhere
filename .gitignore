@@ -1,3 +1,4 @@
 /rust/target
 /frontend-rs/target/
 .gitattributes
+*.swp
