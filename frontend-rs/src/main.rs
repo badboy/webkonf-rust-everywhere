@@ -95,7 +95,7 @@ fn run() {
             var now = Date.now();
 
             document.getElementById('clock').innerHTML = js_formatTime(now-start);
-            setTimeout(run, 100);
+            setTimeout(window.run_timer, 100);
           }
         }
 
