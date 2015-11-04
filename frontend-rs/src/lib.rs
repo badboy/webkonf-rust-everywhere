@@ -417,7 +417,7 @@ impl<'a> Document<'a> {
 
 pub struct LocalStorageInterface;
 pub struct SessionStorageInterface;
-pub struct DateInterface;
+pub struct Date;
 
 pub struct LocalStorageIterator {
     index: i32,
@@ -474,10 +474,9 @@ impl<'a> JQuery<'a> {
     }
 }
 
-impl DateInterface {
-    pub fn now(&self) -> i32 {
+impl Date {
+    pub fn now() -> i32 {
         js! { br#"
-            // Gnaaah, it's in milliseconds, but that doesn't it into 32 bit
             return Date.now() / 1000;
         "# }
     }
@@ -614,8 +613,6 @@ impl Iterator for LocalStorageIterator {
 pub const LocalStorage: LocalStorageInterface = LocalStorageInterface;
 #[allow(non_upper_case_globals)]
 pub const SessionStorage: SessionStorageInterface = SessionStorageInterface;
-#[allow(non_upper_case_globals)]
-pub const Date: DateInterface = DateInterface;
 
 pub fn init<'a>() -> Document<'a> {
     js! { br#"
