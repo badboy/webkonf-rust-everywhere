@@ -73,11 +73,12 @@ fn load_dom(document: &Document) {
     jquery.ajax("http://localhost:3000/api/time", move |data| {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         js!{ (&data[..]) br#"
-            window.tracks = UTF8ToString($0);
-            console.log("got response", UTF8ToString($0));
             var tracks = JSON.parse(UTF8ToString($0));
+            console.log("got response", tracks);
             for (var i = 0, len = tracks.length; i<len; i++) {
-              var diff = js_formatTime(tracks[i].stop - tracks[i].start);
+              var start = tracks[i].start * 1000;
+              var stop  = tracks[i].stop * 1000;
+              var diff = js_formatTime(stop - start);
               $('#timeList').append(
                 '<li data-id="' + tracks[i].id + '">' +
                   diff + '</li>'
