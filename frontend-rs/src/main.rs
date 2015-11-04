@@ -62,7 +62,6 @@ fn load_dom(document: &Document) {
     jquery.ajax("http://localhost:3000/api/time", move |data| {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         js!{ (&data[..]) br#"
-            alert("loaded dom");
             var tracks = JSON.parse(UTF8ToString($0));
             for (var i = 0, len = tracks.length; i<len; i++) {
               var diff = js_formatTime(tracks[i].stop - tracks[i].start);
@@ -94,35 +93,7 @@ fn run() {
 fn main() {
     let document = webplatform::init();
     {
-        let body = document.element_query("body").unwrap();
-
-        let hr = document.element_create("hr").unwrap();
-        body.append(&hr);
-
-        body.html_prepend("<h1>HELLO FROM RUST</h1>");
-        body.html_append("<button>CLICK ME</button>");
-
-        let mut button = document.element_query("button").unwrap();
-
-        let bodyref = body.root_ref();
-        let bodyref2 = body.root_ref();
-        button.on("click", move |_| {
-            bodyref2.prop_set_str("bgColor", "blue");
-        });
-
-        let jquery = webplatform::JQuery::new();
-
-        jquery.ajax("/webplatform.html", move |data| {
-            println!("ajax executed!, data: {:?}", data);
-        });
-
-        webplatform::SessionStorageInterface.set("start", "0");
-
         load_dom(&document);
-
-        println!("This should be blue: {:?}", bodyref.prop_get_str("bgColor"));
-        println!("Width?: {:?}", bodyref.prop_get_i32("clientWidth"));
-        println!("Timestamp: {:?}", webplatform::Date::now());
 
         webplatform::spin();
     }
