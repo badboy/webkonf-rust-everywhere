@@ -5,7 +5,7 @@ BASE=/home/jer/webplatform
 build:
 	multirust override nightly-2015-03-12
 	RUST_BACKTRACE=1 $(BASE)/cargo-build/target/debug/cargo-build --sysroot $(BASE)/rust-rt-minimal/sysroot/ --target i386-unknown-emscripten --emit em-js --release --verbose --emcc ./emcc
-	cd target/i386-unknown-emscripten/release/webplatform.js static/js
+	cp target/i386-unknown-emscripten/release/webplatform.js static/js
 
 watch:
 	nodemon --watch src --exec "make || true" -e rs
