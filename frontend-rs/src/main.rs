@@ -42,7 +42,7 @@ fn stop_time(document: &Document) {
     let data = format!("start={}&stop={}", start, stop);
 
     let jquery = webplatform::JQuery::new();
-    jquery.post("http://localhost:3000/api/time/new", &data, |data| {
+    jquery.post("http://localhost:3000/api/time/new", &data, |_| {
         load_dom(&document);
     });
     log("stop_time end. ajax on its way");
