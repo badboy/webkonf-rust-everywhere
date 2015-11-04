@@ -37,7 +37,7 @@ fn stop_time(document: &Document) {
     let data = format!("start={}&stop={}", start, stop);
 
     let jquery = webplatform::JQuery::new();
-    jquery.post("api/time/new", &data, |data| {
+    jquery.post("http://localhost:3000/api/time/new", &data, |data| {
         load_dom(&document);
     });
 }
