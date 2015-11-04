@@ -91,7 +91,7 @@ fn run() {
     js! {br#"
         if (typeof window.run_timer == "undefined") {
           window.run_timer = function run_timer() {
-            var start = sessionStorage.getItem('start');
+            var start = parseInt(sessionStorage.getItem('start'), 10) * 1000;
             var now = Date.now();
 
             document.getElementById('clock').innerHTML = js_formatTime(now-start);
