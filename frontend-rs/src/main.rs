@@ -32,8 +32,8 @@ fn stop_time(document: Document) {
 
     let data = format!("start={}&stop={}", start, stop);
 
-    let jquery = webplatform::Jquery::new();
-    Jquery.post("api/time/new", |data| {
+    let jquery = webplatform::JQuery::new();
+    JQuery.post("api/time/new", |data| {
         load_dom(document);
     });
 }
@@ -53,7 +53,7 @@ fn toggleTimer(document: Document) {
 }
 
 fn load_dom(document: Document) {
-    let jquery = webplatform::Jquery::new();
+    let jquery = webplatform::JQuery::new();
 
     jqery.ajax("http://localhost:3000/api/time", move |data| {
         document.element_query("#timeList").html_set("");
