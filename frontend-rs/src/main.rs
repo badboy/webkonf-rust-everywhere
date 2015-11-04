@@ -93,6 +93,10 @@ fn run() {
 fn main() {
     let document = webplatform::init();
     {
+        let track = document.element_query("#track").unwrap();
+        track.on("click", |_e| {
+            alert("button cliked");
+        });
         load_dom(&document);
 
         webplatform::spin();
