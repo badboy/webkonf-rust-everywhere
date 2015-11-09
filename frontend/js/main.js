@@ -34,12 +34,14 @@ var stopTime = function stopTime(){
 
   var watch = { start: start, stop: end };
 
+  console.log("Send new track.");
   $.ajax({
     url: "api/time/new",
     data: watch,
     dataType: "json",
     method: "POST"
   }).done(function (data) {
+    console.log("Track saved. Let's load it again.")
     loadDOM();
   });
 }
@@ -101,10 +103,12 @@ var formatTime = function formatTime(ms_time){
 // loading the data from the hoodie.store in the DOM
 */
 var loadDOM = function loadDOM(){
+  console.log("Sending request for tracks.");
   $.ajax({
     url: "api/time",
     dataType: "json",
   }).done(function (tracks) {
+    console.log("Request is back. We've got " + tracks.length + " tracks.");
     $('#timeList').empty();
     for (var i = 0, len = tracks.length; i<len; i++) {
       var diff = formatTime(tracks[i].stop - tracks[i].start);
