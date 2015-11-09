@@ -35,6 +35,12 @@ var stopTime = function stopTime(){
   var watch = { start: start, stop: end };
 
   console.log("Send new track.");
+  console.log("Cookies", document.cookie);
+  var m = document.cookie.match(/user-id=(\d+)/);
+  if (m) {
+    var user_id = m[1];
+    data.user_id = parseInt(user_id, 10);
+  }
   $.ajax({
     url: "api/time/new",
     data: watch,
