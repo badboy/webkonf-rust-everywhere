@@ -5,7 +5,37 @@
 #[macro_use] extern crate webplatform;
 extern crate libc;
 
+extern crate rustc_serialize;
+use rustc_serialize::json::Json;
+
 static mut g_counter : u32 = 0;
+
+fn format_time(ms_time: u64) -> String {
+    let mut time = ms_time;
+    let (s, m, h);
+
+    if time >= 3600000 {
+        h = time / 3600000;
+        time = time % 3600000;
+    } else {
+        h = 0;
+    }
+
+    if time >= 60000 {
+        m = time / 60000;
+        time = time % 60000;
+    } else {
+        m = 0;
+    }
+
+    if time >= 1000 {
+        s = time / 1000;
+    } else {
+        s = 0;
+    }
+
+    format!("{:02} : {:02} : {:02}", h, m, s)
+}
 
 fn counter(n: u32) -> u32 {
     unsafe { g_counter += n; g_counter }
@@ -72,19 +102,28 @@ fn load_dom(document: &Document) {
 
     jquery.ajax("http://localhost:3000/api/time", move |data| {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
-        js!{ (&data[..]) br#"
-            var tracks = JSON.parse(UTF8ToString($0));
-            console.log("got response", tracks);
-            for (var i = 0, len = tracks.length; i<len; i++) {
-              var start = tracks[i].start * 1000;
-              var stop  = tracks[i].stop * 1000;
-              var diff = js_formatTime(stop - start);
-              $('#timeList').append(
-                '<li data-id="' + tracks[i].id + '">' +
-                  diff + '</li>'
-              );
-            }
-        "#};
+        let json_data : Json = Json::from_str(&data).unwrap();
+        log(&format!("JSON is: {:?}", json_data));
+
+        let tracks = match json_data.as_array() {
+            Some(arr) => arr,
+            None => return
+        };
+
+        for track in tracks {
+            let track = track.as_object().unwrap();
+            let id = track.get("id").unwrap().as_u64().unwrap_or(0);
+            let start = track.get("start").unwrap().as_u64().unwrap_or(0);
+            let stop = track.get("stop").unwrap().as_u64().unwrap_or(0);
+
+            let start = start * 1000;
+            let stop = stop * 1000;
+            let diff = format_time(stop-start);
+
+            let html = format!("<li data-id=\"{}\">{}</li>", id, diff);
+            document.element_query("#timeList")
+                .and_then(|t| Some(t.html_append(&html)));
+        }
     });
 }
 
