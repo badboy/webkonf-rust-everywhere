@@ -39,7 +39,7 @@ var stopTime = function stopTime(){
   var m = document.cookie.match(/user-id=(\d+)/);
   if (m) {
     var user_id = m[1];
-    data.user_id = parseInt(user_id, 10);
+    watch.user_id = parseInt(user_id, 10);
   }
   $.ajax({
     url: "api/time/new",
