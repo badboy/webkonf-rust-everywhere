@@ -146,7 +146,7 @@ end
 
 map mount_path do
   use Rack::MethodOverride
-  use Rack::Session::Cookie, secret: SESSION_SECRET
+  use Rack::Session::Cookie, secret: SESSION_SECRET, httponly: false
   use Rack::CommonLogger, $stdout
 
   map "/api" do
