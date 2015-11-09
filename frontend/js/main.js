@@ -110,9 +110,18 @@ var formatTime = function formatTime(ms_time){
 */
 var loadDOM = function loadDOM(){
   console.log("Sending request for tracks.");
+  console.log("Cookies", document.cookie);
+
+  var data = {}
+  var m = document.cookie.match(/user-id=(\d+)/);
+  if (m) {
+    var user_id = m[1];
+    data.user_id = parseInt(user_id, 10);
+  }
   $.ajax({
     url: "api/time",
     dataType: "json",
+    data: data
   }).done(function (tracks) {
     console.log("Request is back. We've got " + tracks.length + " tracks.");
     $('#timeList').empty();
