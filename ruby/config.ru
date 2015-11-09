@@ -42,8 +42,11 @@ class API < Syro::Deck
   def current_user
     @current_user ||= begin
                         user_id = req.session["user-id"]
+                        $stderr.puts "Got User id: #{user_id.inspect}"
 
                         user = fetch_user_or_create(user_id)
+
+                        $stderr.puts "User: #{user.inspect}"
 
                         if user.nil?
                           unauthorized("Failed to find user") and return
@@ -55,6 +58,7 @@ class API < Syro::Deck
   end
 
   def set_user_cookie(user)
+    $stderr.puts "User cookie set to #{user.name}"
     req.session["user-id"] = user.name
   end
 
@@ -76,6 +80,8 @@ class API < Syro::Deck
   end
 
   def fetch_user_or_create(user_id)
+    $stdout.write "fetch_user_or_create with id=#{user_id.inspect}"
+
     if user_id.nil?
       return new_random_user
     end
