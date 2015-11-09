@@ -76,9 +76,13 @@ class API < Syro::Deck
   end
 
   def fetch_user_or_create(user_id)
+    if user_id.nil?
+      return new_random_user
+    end
+
     user = User.with(:name, user_id)
-    if user_id.nil? || user.nil?
-      user = new_random_user
+    if user.nil?
+      user = User.create(name: user_id)
     end
 
     user
