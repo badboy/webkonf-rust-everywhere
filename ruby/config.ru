@@ -4,8 +4,11 @@
 require "json"
 require "syro"
 require "ohm"
+require "redic"
 
 require_relative "models"
+
+Ohm.redis = Redic.new("redis://127.0.0.1:6379/1")
 
 FRONTENT_DIR = "../frontend"
 SESSION_SECRET = ENV.fetch("RACK_SESSION_SECRET", "87998b9378")
