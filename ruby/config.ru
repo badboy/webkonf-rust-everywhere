@@ -80,7 +80,7 @@ class API < Syro::Deck
   end
 
   def fetch_user_or_create(user_id)
-    $stdout.write "fetch_user_or_create with id=#{user_id.inspect}"
+    $stdout.puts "fetch_user_or_create with id=#{user_id.inspect}"
 
     if user_id.nil?
       return new_random_user
