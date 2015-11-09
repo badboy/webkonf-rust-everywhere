@@ -47,7 +47,7 @@ class API < Syro::Deck
                         if user_id.nil?
                           user_id = req.params["user_id"]
                           $stderr.puts "Got User id from parameter: #{user_id.inspect}"
-                          user_id = user_id.to_i if user_id?
+                          user_id = user_id.to_i if user_id.nil?
                         end
 
                         user = fetch_user_or_create(user_id)
