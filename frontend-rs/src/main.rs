@@ -72,7 +72,7 @@ fn stop_time(document: &Document) {
     let data = format!("start={}&stop={}", start, stop);
 
     let jquery = webplatform::JQuery::new();
-    jquery.post("http://localhost:3000/api/time/new", &data, |_| {
+    jquery.post("api/time/new", &data, |_| {
         load_dom(&document);
     });
     log("stop_time end. ajax on its way");
@@ -100,7 +100,7 @@ fn load_dom(document: &Document) {
     log("loading the dom. I guess.");
     let jquery = webplatform::JQuery::new();
 
-    jquery.ajax("http://localhost:3000/api/time", move |data| {
+    jquery.ajax("api/time", move |data| {
         document.element_query("#timeList").and_then(|t| Some(t.html_set("")));
         let json_data : Json = Json::from_str(&data).unwrap();
         log(&format!("JSON is: {:?}", json_data));
