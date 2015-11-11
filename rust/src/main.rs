@@ -107,7 +107,7 @@ fn main() {
 
 fn redirect_to_index(_: &mut Request) -> IronResult<Response> {
     let mut res = Response::with(status::TemporaryRedirect);
-    res.headers.set(Location("/index.html".into()));
+    res.headers.set(Location("index.html".into()));
     Ok(res)
 }
 
