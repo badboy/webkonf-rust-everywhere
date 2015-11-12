@@ -43,7 +43,7 @@ ul {
 }
 li {
   display: block;
-  border-bottom: 1px solid #01895e;
+  border-bottom: 1px solid #2a6496;
   padding: 20px 10px;
   text-align: center;
   font-size: 18px;
@@ -51,7 +51,7 @@ li {
 }
 
 footer {
-  color: #027752;
+  color: white;
 }
 hr {
   border: 1px solid white;
